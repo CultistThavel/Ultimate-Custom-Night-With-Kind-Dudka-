@@ -6,71 +6,77 @@
     <link href="https://fonts.googleapis.com/css2?family=Press+Start+2P&display=swap" rel="stylesheet">
     <style>
         body {
+            margin: 0;
+            padding: 20px;
             background-color: black;
             color: white;
-            font-family: 'Press Start 2P', cursive;
+            font-family: 'Press+Start+2P', cursive;
             display: flex;
             justify-content: center;
             align-items: center;
             height: 100vh;
-            margin: 0;
             overflow: hidden;
+            user-select: none;
+        }
+
+        #loading-screen, #warn-screen {
             text-align: center;
+            position: absolute;
+            width: 100%;
         }
-        #loading, #warn {
-            font-size: 14px;
-            line-height: 1.6;
+
+        .fade-in {
+            animation: fadeIn 0.5s ease-out forwards;
         }
-        #tap-text {
-            font-size: 10px;
-            margin-top: 20px;
-            color: #aaa;
-            cursor: pointer;
+
+        @keyframes fadeIn {
+            from { opacity: 0; transform: scale(0.9); }
+            to { opacity: 1; transform: scale(1); }
         }
-        .grid-container {
+
+        #grid-container {
             display: none;
             grid-template-columns: repeat(4, 1fr);
-            gap: 15px;
-            padding: 20px;
-            animation: fadeIn 0.5s ease-in-out;
+            gap: 20px;
+            max-width: 90vw;
+            max-height: 90vh;
         }
-        .icon {
-            width: 100px;
-            height: 100px;
-            border: 2px solid #555;
+
+        .icon-box {
+            width: 180px;
+            height: 180px;
+            border: 4px solid #333;
             cursor: pointer;
-            object-fit: cover;
+            background-size: cover;
+            background-position: center;
             transition: transform 0.1s;
         }
-        .icon:active { transform: scale(0.9); }
-        @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
+
+        .icon-box:active {
+            transform: scale(0.95);
+        }
+
+        .warn-text { font-size: 18px; line-height: 1.6; margin-bottom: 20px; }
+        .tap-text { color: #aaa; font-size: 14px; cursor: pointer; }
     </style>
 </head>
 <body>
 
-    <div id="loading">Загрузка Ресурсов. Это займёт считанные секунды — <span id="percent">0</span>%</div>
-
-    <div id="warn" style="display:none;">
-        Варн: Данный сайт не представляет себя игрой, это чисто вики, в котором заранее запланированы все враги и их механики.
-        <div id="tap-text">Тапните на экран, чтобы загрузить все ресурсы.</div>
+    <div id="loading-screen">
+        <h2 id="load-pct">Загрузка Ресурсов. Это займёт считанные секунды — 0%</h2>
     </div>
 
-    <div class="grid-container" id="grid">
-        </div>
+    <div id="warn-screen" style="display: none;">
+        <div class="warn-text">Варн: Данный сайт не представляет себя игрой, это чисто вики, в котором заранее запланированы все враги и их механики.</div>
+        <div class="tap-text" onclick="startGame()">Тапните на экран, чтобы загрузить все ресурсы.</div>
+    </div>
 
-    <audio id="bg-music" loop>
-        <source src="https://www.dropbox.com/scl/fi/au5593fc64ug0g92ji5d9/1-01.-Eisoptrophobia.mp3?rlkey=8lnfajiadsmusqt4v53v7qz2z&st=r49cknxx&dl=1" type="audio/mpeg">
-    </audio>
+    <div id="grid-container"></div>
+
+    <audio id="bg-music" loop src="https://www.dropbox.com/scl/fi/au5593fc64ug0g92ji5d9/1-01.-Eisoptrophobia.mp3?rlkey=8lnfajiadsmusqt4v53v7qz2z&st=r49cknxx&dl=1"></audio>
+    <audio id="click-sound" src="https://www.dropbox.com/scl/fi/uj9r8sercw7i9jclfsnw1/Blip3.mp3?rlkey=j3696ja6et3o97anj3nulgvmp&st=ht40ucw8&dl=1"></audio>
 
     <script>
-        const loading = document.getElementById('loading');
-        const warn = document.getElementById('warn');
-        const grid = document.getElementById('grid');
-        const percent = document.getElementById('percent');
-        const music = document.getElementById('bg-music');
-        const clickSound = new Audio('https://www.dropbox.com/scl/fi/uj9r8sercw7i9jclfsnw1/Blip3.mp3?rlkey=j3696ja6et3o97anj3nulgvmp&st=ht40ucw8&dl=1');
-
-        // Данные иконок
         const iconsData = [
             { normal: 'https://www.dropbox.com/scl/fi/blqc1b1hus9ayfzz5see1/Picsart_26-03-08_22-40-48-999.png?rlkey=h7g82cz3a2aip4alqqp05hhe9&dl=1', alt: 'https://www.dropbox.com/scl/fi/q3n7ivwv8k1idbm0v1shq/Picsart_26-03-18_15-12-22-994.png?rlkey=k6n5el7wkqp5gynwoaw8e3mj5&dl=1' },
             { normal: 'https://www.dropbox.com/scl/fi/ubgcje5evfhisi89q6e7c/Picsart_26-03-08_22-39-39-914.png?rlkey=i3mnzo9q1ojgjdryeimi4016x&dl=1', alt: 'https://www.dropbox.com/scl/fi/98o1jkawbsylwooy8pujv/Picsart_26-03-18_16-18-47-242.png?rlkey=9cajmp7zcsheskumlnruwgx8x&dl=1' },
@@ -78,7 +84,7 @@
             { normal: 'https://www.dropbox.com/scl/fi/j4avdlfyexcg2hrf59kua/Picsart_26-03-13_16-35-46-512.jpg?rlkey=rs1zlp3xp1kj1bh9byj50n9sp&dl=1', alt: 'https://www.dropbox.com/scl/fi/4v5nyibi0nb3obylgoij2/Picsart_26-03-18_16-23-32-874.jpg?rlkey=280tp4nz1g7kb66y25hosv410&dl=1' },
             { normal: 'https://www.dropbox.com/scl/fi/div398beaq6v8zxk82zrq/Picsart_26-03-13_16-34-49-085.jpg?rlkey=fplvmbtf9t7d9sdrmarq39m8u&dl=1', alt: 'https://www.dropbox.com/scl/fi/ehee4ybyo35qac2o8bwcl/Picsart_26-03-18_16-10-18-756.png?rlkey=37fzfyimrspexph6vzex8z53r&dl=1' },
             { normal: 'https://www.dropbox.com/scl/fi/t6rfsou7ncgzv9b52tno8/Picsart_26-03-13_16-35-16-232.jpg?rlkey=5wgpzsh5617562janf8kin1rg&dl=1', alt: 'https://www.dropbox.com/scl/fi/ewvi7ggswqu1vtzbosryc/Picsart_26-03-18_16-15-59-574.png?rlkey=mvfxb5fq3njhp4o6y6ejzdv2d&dl=1' },
-            { normal: 'https://www.dropbox.com/scl/fi/2dhlhnjqaqiiw6avov26q/Picsart_26-03-18_13-57-40-182.png?rlkey=mskqpud6eoink13b6vrzmmjs5&dl=1', alt: 'https://www.dropbox.com/scl/fi/ok0opgqol7ykfz03vo4h8/Picsart_26-03-18_15-37-57-825.png?rlkey=xx7m3k3b67zmw4xgzfenn5ymh&dl=1' },
+            { normal: 'https://www.dropbox.com/scl/fi/2dhlnjqaqiiw6avov26q/Picsart_26-03-18_13-57-40-182.png?rlkey=mskqpud6eoink13b6vrzmmjs5&dl=1', alt: 'https://www.dropbox.com/scl/fi/ok0opgqol7ykfz03vo4h8/Picsart_26-03-18_15-37-57-825.png?rlkey=xx7m3k3b67zmw4xgzfenn5ymh&dl=1' },
             { normal: 'https://www.dropbox.com/scl/fi/ltgv7pk1mrs4bp2z0wecx/Picsart_26-03-18_13-58-21-371.png?rlkey=s2vco330ai1ubojwgn6c7elsi&dl=1', alt: 'https://www.dropbox.com/scl/fi/ud39u9k8gj8p8uevroovn/Picsart_26-03-18_15-26-23-654.png?rlkey=oszpaf5sb10a9ocbke3yl0a63&dl=1' },
             { normal: 'https://www.dropbox.com/scl/fi/ezphdvd1nbmmmk0rz7zvp/Picsart_26-03-18_13-59-18-358.png?rlkey=q3t2kgwu204jcsr1myrwiiph8&dl=1', alt: 'https://www.dropbox.com/scl/fi/a60hpytnaul1jznormx8o/Picsart_26-03-18_16-06-48-353.png?rlkey=84k7viakytowcdiz6vthufuos&dl=1' },
             { normal: 'https://www.dropbox.com/scl/fi/3zojxmgce2566oy42vxwd/Picsart_26-03-18_13-59-43-463.png?rlkey=vq2nx13fqstzcgnol9dzi4sag&dl=1', alt: 'https://www.dropbox.com/scl/fi/o2r7mvvikklt4e9527oi2/Picsart_26-03-18_15-45-39-080.png?rlkey=m3nyumr3l8bpsi1gcnhmjj4et&dl=1' },
@@ -90,50 +96,43 @@
             { normal: 'https://www.dropbox.com/scl/fi/i5ome1zq78c6eptqbhqsu/Picsart_26-03-18_14-02-56-364.png?rlkey=7n85hpii380jz0lqbxpn16okm&dl=1', alt: 'https://www.dropbox.com/scl/fi/f4qxdue11pig11s7brdbv/Picsart_26-03-18_15-17-08-770.png?rlkey=fx4y6x6a217mipy4zuh6uzo9y&dl=1' }
         ];
 
-        // Имитация загрузки
-        let count = 0;
-        let interval = setInterval(() => {
-            count++;
-            percent.innerText = count;
-            if(count >= 100) {
-                clearInterval(interval);
-                loading.style.display = 'none';
+        // Загрузка
+        let pct = 0;
+        let loader = setInterval(() => {
+            pct += 5;
+            document.getElementById('load-pct').innerText = `Загрузка Ресурсов. Это займёт считанные секунды — ${pct}%`;
+            if (pct >= 100) {
+                clearInterval(loader);
+                document.getElementById('loading-screen').style.display = 'none';
+                const warn = document.getElementById('warn-screen');
                 warn.style.display = 'block';
+                warn.classList.add('fade-in');
             }
-        }, 30);
+        }, 100);
 
-        // Старт по клику
-        document.body.addEventListener('click', function start() {
-            if(count < 100) return;
+        function startGame() {
+            document.getElementById('warn-screen').style.display = 'none';
+            document.getElementById('bg-music').play();
             
-            music.play();
-            warn.style.display = 'none';
-            grid.style.display = 'grid';
+            const container = document.getElementById('grid-container');
+            container.style.display = 'grid';
+            container.classList.add('fade-in');
 
-            // Генерируем иконки
-            iconsData.forEach(data => {
-                const img = document.createElement('img');
-                img.src = data.normal;
-                img.className = 'icon';
-                img.dataset.state = 'normal';
+            iconsData.forEach((data, index) => {
+                const box = document.createElement('div');
+                box.className = 'icon-box';
+                box.style.backgroundImage = `url('${data.normal}')`;
                 
-                img.onclick = (e) => {
-                    e.stopPropagation();
-                    clickSound.currentTime = 0;
-                    clickSound.play();
-                    if(img.dataset.state === 'normal') {
-                        img.src = data.alt;
-                        img.dataset.state = 'alt';
-                    } else {
-                        img.src = data.normal;
-                        img.dataset.state = 'normal';
-                    }
+                let isAlt = false;
+                box.onclick = () => {
+                    document.getElementById('click-sound').currentTime = 0;
+                    document.getElementById('click-sound').play();
+                    isAlt = !isAlt;
+                    box.style.backgroundImage = isAlt ? `url('${data.alt}')` : `url('${data.normal}')`;
                 };
-                grid.appendChild(img);
+                container.appendChild(box);
             });
-
-            document.body.removeEventListener('click', start);
-        });
+        }
     </script>
 </body>
 </html>
