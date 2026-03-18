@@ -2,27 +2,35 @@
 <html lang="ru">
 <head>
     <meta charset="UTF-8">
-    <title>Ultimate Custom Night With Kind Dudka</title>
-    <link href="https://fonts.googleapis.com/css2?family=Press+Start+2P&display=swap" rel="stylesheet">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>UCN With Kind Dudka - Wiki</title>
     <style>
-        body {
+        @import url('https://fonts.googleapis.com/css2?family=Press+Start+2P&display=swap');
+
+        body, html {
             margin: 0;
-            padding: 20px;
+            padding: 0;
+            width: 100%;
+            height: 100%;
             background-color: black;
             color: white;
             font-family: 'Press+Start+2P', cursive;
+            overflow: hidden;
             display: flex;
             justify-content: center;
             align-items: center;
-            height: 100vh;
-            overflow: hidden;
             user-select: none;
         }
 
-        #loading-screen, #warn-screen {
+        #screen {
+            width: 100vw;
+            height: 100vh;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
             text-align: center;
-            position: absolute;
-            width: 100%;
+            padding: 20px;
         }
 
         .fade-in {
@@ -34,105 +42,161 @@
             to { opacity: 1; transform: scale(1); }
         }
 
-        #grid-container {
-            display: none;
+        /* Сетка иконок */
+        #grid {
+            display: grid;
             grid-template-columns: repeat(4, 1fr);
-            gap: 20px;
-            max-width: 90vw;
-            max-height: 90vh;
+            grid-gap: 20px;
+            display: none;
+            width: 90%;
+            max-width: 1200px;
         }
 
-        .icon-box {
-            width: 180px;
-            height: 180px;
-            border: 4px solid #333;
+        .icon {
+            width: 100%;
+            aspect-ratio: 1/1;
             cursor: pointer;
+            border: 4px solid #333;
+            transition: transform 0.1s, border-color 0.2s;
             background-size: cover;
             background-position: center;
-            transition: transform 0.1s;
         }
 
-        .icon-box:active {
+        .icon:hover {
+            border-color: #fff;
+            transform: scale(1.05);
+        }
+
+        .icon:active {
             transform: scale(0.95);
         }
 
-        .warn-text { font-size: 18px; line-height: 1.6; margin-bottom: 20px; }
-        .tap-text { color: #aaa; font-size: 14px; cursor: pointer; }
+        #warn-text {
+            font-size: 18px;
+            line-height: 1.6;
+            color: #ff4444; /* Сделал варн чуть заметнее */
+            display: none;
+            margin-bottom: 30px;
+        }
+
+        #tap-hint {
+            font-size: 14px;
+            color: #aaa;
+            display: none;
+            cursor: pointer;
+        }
+
+        #loading-text {
+            font-size: 24px;
+        }
     </style>
 </head>
 <body>
 
-    <div id="loading-screen">
-        <h2 id="load-pct">Загрузка Ресурсов. Это займёт считанные секунды — 0%</h2>
+    <div id="screen">
+        <div id="loading-text">Загрузка Ресурсов. Это займёт считанные секунды — <span id="percent">0</span>%</div>
+        
+        <div id="warn-text" class="fade-in">
+            Варн: Данный сайт не представляет себя игрой, это чисто вики, в котором заранее запланированы все враги и их механики.
+        </div>
+        <div id="tap-hint" class="fade-in">Тапните на экран, чтобы загрузить все ресурсы.</div>
+
+        <div id="grid"></div>
     </div>
 
-    <div id="warn-screen" style="display: none;">
-        <div class="warn-text">Варн: Данный сайт не представляет себя игрой, это чисто вики, в котором заранее запланированы все враги и их механики.</div>
-        <div class="tap-text" onclick="startGame()">Тапните на экран, чтобы загрузить все ресурсы.</div>
-    </div>
-
-    <div id="grid-container"></div>
-
-    <audio id="bg-music" loop src="https://www.dropbox.com/scl/fi/au5593fc64ug0g92ji5d9/1-01.-Eisoptrophobia.mp3?rlkey=8lnfajiadsmusqt4v53v7qz2z&st=r49cknxx&dl=1"></audio>
-    <audio id="click-sound" src="https://www.dropbox.com/scl/fi/uj9r8sercw7i9jclfsnw1/Blip3.mp3?rlkey=j3696ja6et3o97anj3nulgvmp&st=ht40ucw8&dl=1"></audio>
+    <audio id="bg-music" loop>
+        <source src="https://www.dropbox.com/scl/fi/au5593fc64ug0g92ji5d9/1-01.-Eisoptrophobia.mp3?rlkey=8lnfajiadsmusqt4v53v7qz2z&st=r49cknxx&dl=1" type="audio/mpeg">
+    </audio>
+    <audio id="click-sound">
+        <source src="https://www.dropbox.com/scl/fi/uj9r8sercw7i9jclfsnw1/Blip3.mp3?rlkey=j3696ja6et3o97anj3nulgvmp&st=ht40ucw8&dl=1" type="audio/mpeg">
+    </audio>
 
     <script>
-        const iconsData = [
-            { normal: 'https://www.dropbox.com/scl/fi/blqc1b1hus9ayfzz5see1/Picsart_26-03-08_22-40-48-999.png?rlkey=h7g82cz3a2aip4alqqp05hhe9&dl=1', alt: 'https://www.dropbox.com/scl/fi/q3n7ivwv8k1idbm0v1shq/Picsart_26-03-18_15-12-22-994.png?rlkey=k6n5el7wkqp5gynwoaw8e3mj5&dl=1' },
-            { normal: 'https://www.dropbox.com/scl/fi/ubgcje5evfhisi89q6e7c/Picsart_26-03-08_22-39-39-914.png?rlkey=i3mnzo9q1ojgjdryeimi4016x&dl=1', alt: 'https://www.dropbox.com/scl/fi/98o1jkawbsylwooy8pujv/Picsart_26-03-18_16-18-47-242.png?rlkey=9cajmp7zcsheskumlnruwgx8x&dl=1' },
-            { normal: 'https://www.dropbox.com/scl/fi/i4fdy9nzpa4492o8jws26/Picsart_26-03-08_22-40-09-936.jpg?rlkey=llql2otnqlv9m6vjzchqrz3l4&dl=1', alt: 'https://www.dropbox.com/scl/fi/p4y8dqeqfx2g4anomkgvg/Picsart_26-03-18_16-12-40-954.png?rlkey=8a19jlqs4fbr8xpzb3uhifam3&dl=1' },
-            { normal: 'https://www.dropbox.com/scl/fi/j4avdlfyexcg2hrf59kua/Picsart_26-03-13_16-35-46-512.jpg?rlkey=rs1zlp3xp1kj1bh9byj50n9sp&dl=1', alt: 'https://www.dropbox.com/scl/fi/4v5nyibi0nb3obylgoij2/Picsart_26-03-18_16-23-32-874.jpg?rlkey=280tp4nz1g7kb66y25hosv410&dl=1' },
-            { normal: 'https://www.dropbox.com/scl/fi/div398beaq6v8zxk82zrq/Picsart_26-03-13_16-34-49-085.jpg?rlkey=fplvmbtf9t7d9sdrmarq39m8u&dl=1', alt: 'https://www.dropbox.com/scl/fi/ehee4ybyo35qac2o8bwcl/Picsart_26-03-18_16-10-18-756.png?rlkey=37fzfyimrspexph6vzex8z53r&dl=1' },
-            { normal: 'https://www.dropbox.com/scl/fi/t6rfsou7ncgzv9b52tno8/Picsart_26-03-13_16-35-16-232.jpg?rlkey=5wgpzsh5617562janf8kin1rg&dl=1', alt: 'https://www.dropbox.com/scl/fi/ewvi7ggswqu1vtzbosryc/Picsart_26-03-18_16-15-59-574.png?rlkey=mvfxb5fq3njhp4o6y6ejzdv2d&dl=1' },
-            { normal: 'https://www.dropbox.com/scl/fi/2dhlnjqaqiiw6avov26q/Picsart_26-03-18_13-57-40-182.png?rlkey=mskqpud6eoink13b6vrzmmjs5&dl=1', alt: 'https://www.dropbox.com/scl/fi/ok0opgqol7ykfz03vo4h8/Picsart_26-03-18_15-37-57-825.png?rlkey=xx7m3k3b67zmw4xgzfenn5ymh&dl=1' },
-            { normal: 'https://www.dropbox.com/scl/fi/ltgv7pk1mrs4bp2z0wecx/Picsart_26-03-18_13-58-21-371.png?rlkey=s2vco330ai1ubojwgn6c7elsi&dl=1', alt: 'https://www.dropbox.com/scl/fi/ud39u9k8gj8p8uevroovn/Picsart_26-03-18_15-26-23-654.png?rlkey=oszpaf5sb10a9ocbke3yl0a63&dl=1' },
-            { normal: 'https://www.dropbox.com/scl/fi/ezphdvd1nbmmmk0rz7zvp/Picsart_26-03-18_13-59-18-358.png?rlkey=q3t2kgwu204jcsr1myrwiiph8&dl=1', alt: 'https://www.dropbox.com/scl/fi/a60hpytnaul1jznormx8o/Picsart_26-03-18_16-06-48-353.png?rlkey=84k7viakytowcdiz6vthufuos&dl=1' },
-            { normal: 'https://www.dropbox.com/scl/fi/3zojxmgce2566oy42vxwd/Picsart_26-03-18_13-59-43-463.png?rlkey=vq2nx13fqstzcgnol9dzi4sag&dl=1', alt: 'https://www.dropbox.com/scl/fi/o2r7mvvikklt4e9527oi2/Picsart_26-03-18_15-45-39-080.png?rlkey=m3nyumr3l8bpsi1gcnhmjj4et&dl=1' },
-            { normal: 'https://www.dropbox.com/scl/fi/jrazsz8o0xsrogzpw4kk8/Picsart_26-03-18_14-00-10-002.png?rlkey=2ir4s2s95hlt7lss88c6thk2j&dl=1', alt: 'https://www.dropbox.com/scl/fi/bw0dq6c12pw68m9zaijyi/Picsart_26-03-18_15-31-14-518.png?rlkey=qx3hrrpiqslbgv3m157j36jf7&dl=1' },
-            { normal: 'https://www.dropbox.com/scl/fi/lrh0rrb3nriwzu0h47k8n/Picsart_26-03-18_14-00-38-347.png?rlkey=42yzhtl1eumrjss9cesk411is&dl=1', alt: 'https://www.dropbox.com/scl/fi/5hmqbcjnyt847shs1ho3j/Picsart_26-03-18_15-15-17-960.png?rlkey=ta2kxommjcj4ki5pyciirvmm6&dl=1' },
-            { normal: 'https://www.dropbox.com/scl/fi/jhln2wsvx7tptd5dr3q71/Picsart_26-03-18_14-01-31-847.png?rlkey=rotmqt9udvcj8s3wvx78v2x5s&dl=1', alt: 'https://www.dropbox.com/scl/fi/okr32xa7uyrrlherb09d0/Picsart_26-03-18_15-28-47-504.png?rlkey=6fms5b01suq5xji482ycj7tju&dl=1' },
-            { normal: 'https://www.dropbox.com/scl/fi/g56kpvffn3kswd8rlywuq/Picsart_26-03-18_15-06-09-716.png?rlkey=srum8k3ani5nkclyb77nvsbxq&dl=1', alt: 'https://www.dropbox.com/scl/fi/124ppt3haitm3lpnfmgbq/Picsart_26-03-18_15-09-10-304.png?rlkey=niz5x1rb4bho3zi0ssmx6rvb6&dl=1' },
-            { normal: 'https://www.dropbox.com/scl/fi/39byevsx599mosvlan0z2/Picsart_26-03-18_14-02-11-613.png?rlkey=xmwzdgjcebwa9rjvrkxb1kx2b&dl=1', alt: 'https://www.dropbox.com/scl/fi/08v4724c35eth9uxsmye8/Picsart_26-03-18_15-23-09-420.png?rlkey=ug6ol8i63xv66nkk4nm7k45ph&dl=1' },
-            { normal: 'https://www.dropbox.com/scl/fi/i5ome1zq78c6eptqbhqsu/Picsart_26-03-18_14-02-56-364.png?rlkey=7n85hpii380jz0lqbxpn16okm&dl=1', alt: 'https://www.dropbox.com/scl/fi/f4qxdue11pig11s7brdbv/Picsart_26-03-18_15-17-08-770.png?rlkey=fx4y6x6a217mipy4zuh6uzo9y&dl=1' }
+        const loadingText = document.getElementById('loading-text');
+        const percentSpan = document.getElementById('percent');
+        const warnText = document.getElementById('warn-text');
+        const tapHint = document.getElementById('tap-hint');
+        const grid = document.getElementById('grid');
+        const bgMusic = document.getElementById('bg-music');
+        const clickSound = document.getElementById('click-sound');
+
+        // Данные иконок [Оригинал, Нажатая]
+        const characters = [
+            ["https://www.dropbox.com/scl/fi/blqc1b1hus9ayfzz5see1/Picsart_26-03-08_22-40-48-999.png?rlkey=h7g82cz3a2aip4alqqp05hhe9&dl=1", "https://www.dropbox.com/scl/fi/q3n7ivwv8k1idbm0v1shq/Picsart_26-03-18_15-12-22-994.png?rlkey=k6n5el7wkqp5gynwoaw8e3mj5&dl=1"],
+            ["https://www.dropbox.com/scl/fi/ubgcje5evfhisi89q6e7c/Picsart_26-03-08_22-39-39-914.png?rlkey=i3mnzo9q1ojgjdryeimi4016x&dl=1", "https://www.dropbox.com/scl/fi/98o1jkawbsylwooy8pujv/Picsart_26-03-18_16-18-47-242.png?rlkey=9cajmp7zcsheskumlnruwgx8x&dl=1"],
+            ["https://www.dropbox.com/scl/fi/i4fdy9nzpa4492o8jws26/Picsart_26-03-08_22-40-09-936.jpg?rlkey=llql2otnqlv9m6vjzchqrz3l4&dl=1", "https://www.dropbox.com/scl/fi/p4y8dqeqfx2g4anomkgvg/Picsart_26-03-18_16-12-40-954.png?rlkey=8a19jlqs4fbr8xpzb3uhifam3&dl=1"],
+            ["https://www.dropbox.com/scl/fi/j4avdlfyexcg2hrf59kua/Picsart_26-03-13_16-35-46-512.jpg?rlkey=rs1zlp3xp1kj1bh9byj50n9sp&dl=1", "https://www.dropbox.com/scl/fi/4v5nyibi0nb3obylgoij2/Picsart_26-03-18_16-23-32-874.jpg?rlkey=280tp4nz1g7kb66y25hosv410&dl=1"],
+            ["https://www.dropbox.com/scl/fi/div398beaq6v8zxk82zrq/Picsart_26-03-13_16-34-49-085.jpg?rlkey=fplvmbtf9t7d9sdrmarq39m8u&dl=1", "https://www.dropbox.com/scl/fi/ehee4ybyo35qac2o8bwcl/Picsart_26-03-18_16-10-18-756.png?rlkey=37fzfyimrspexph6vzex8z53r&dl=1"],
+            ["https://www.dropbox.com/scl/fi/t6rfsou7ncgzv9b52tno8/Picsart_26-03-13_16-35-16-232.jpg?rlkey=5wgpzsh5617562janf8kin1rg&dl=1", "https://www.dropbox.com/scl/fi/ewvi7ggswqu1vtzbosryc/Picsart_26-03-18_16-15-59-574.png?rlkey=mvfxb5fq3njhp4o6y6ejzdv2d&dl=1"],
+            ["https://www.dropbox.com/scl/fi/2dhlhnjqaqiiw6avov26q/Picsart_26-03-18_13-57-40-182.png?rlkey=mskqpud6eoink13b6vrzmmjs5&dl=1", "https://www.dropbox.com/scl/fi/ok0opgqol7ykfz03vo4h8/Picsart_26-03-18_15-37-57-825.png?rlkey=xx7m3k3b67zmw4xgzfenn5ymh&dl=1"],
+            ["https://www.dropbox.com/scl/fi/ltgv7pk1mrs4bp2z0wecx/Picsart_26-03-18_13-58-21-371.png?rlkey=s2vco330ai1ubojwgn6c7elsi&dl=1", "https://www.dropbox.com/scl/fi/ud39u9k8gj8p8uevroovn/Picsart_26-03-18_15-26-23-654.png?rlkey=oszpaf5sb10a9ocbke3yl0a63&dl=1"],
+            ["https://www.dropbox.com/scl/fi/ezphdvd1nbmmmk0rz7zvp/Picsart_26-03-18_13-59-18-358.png?rlkey=q3t2kgwu204jcsr1myrwiiph8&dl=1", "https://www.dropbox.com/scl/fi/a60hpytnaul1jznormx8o/Picsart_26-03-18_16-06-48-353.png?rlkey=84k7viakytowcdiz6vthufuos&dl=1"],
+            ["https://www.dropbox.com/scl/fi/3zojxmgce2566oy42vxwd/Picsart_26-03-18_13-59-43-463.png?rlkey=vq2nx13fqstzcgnol9dzi4sag&dl=1", "https://www.dropbox.com/scl/fi/o2r7mvvikklt4e9527oi2/Picsart_26-03-18_15-45-39-080.png?rlkey=m3nyumr3l8bpsi1gcnhmjj4et&dl=1"],
+            ["https://www.dropbox.com/scl/fi/jrazsz8o0xsrogzpw4kk8/Picsart_26-03-18_14-00-10-002.png?rlkey=2ir4s2s95hlt7lss88c6thk2j&dl=1", "https://www.dropbox.com/scl/fi/bw0dq6c12pw68m9zaijyi/Picsart_26-03-18_15-31-14-518.png?rlkey=qx3hrrpiqslbgv3m157j36jf7&dl=1"],
+            ["https://www.dropbox.com/scl/fi/lrh0rrb3nriwzu0h47k8n/Picsart_26-03-18_14-00-38-347.png?rlkey=42yzhtl1eumrjss9cesk411is&dl=1", "https://www.dropbox.com/scl/fi/5hmqbcjnyt847shs1ho3j/Picsart_26-03-18_15-15-17-960.png?rlkey=ta2kxommjcj4ki5pyciirvmm6&dl=1"],
+            ["https://www.dropbox.com/scl/fi/jhln2wsvx7tptd5dr3q71/Picsart_26-03-18_14-01-31-847.png?rlkey=rotmqt9udvcj8s3wvx78v2x5s&dl=1", "https://www.dropbox.com/scl/fi/okr32xa7uyrrlherb09d0/Picsart_26-03-18_15-28-47-504.png?rlkey=6fms5b01suq5xji482ycj7tju&dl=1"],
+            ["https://www.dropbox.com/scl/fi/g56kpvffn3kswd8rlywuq/Picsart_26-03-18_15-06-09-716.png?rlkey=srum8k3ani5nkclyb77nvsbxq&dl=1", "https://www.dropbox.com/scl/fi/124ppt3haitm3lpnfmgbq/Picsart_26-03-18_15-09-10-304.png?rlkey=niz5x1rb4bho3zi0ssmx6rvb6&dl=1"],
+            ["https://www.dropbox.com/scl/fi/39byevsx599mosvlan0z2/Picsart_26-03-18_14-02-11-613.png?rlkey=xmwzdgjcebwa9rjvrkxb1kx2b&dl=1", "https://www.dropbox.com/scl/fi/08v4724c35eth9uxsmye8/Picsart_26-03-18_15-23-09-420.png?rlkey=ug6ol8i63xv66nkk4nm7k45ph&dl=1"],
+            ["https://www.dropbox.com/scl/fi/i5ome1zq78c6eptqbhqsu/Picsart_26-03-18_14-02-56-364.png?rlkey=7n85hpii380jz0lqbxpn16okm&dl=1", "https://www.dropbox.com/scl/fi/f4qxdue11pig11s7brdbv/Picsart_26-03-18_15-17-08-770.png?rlkey=fx4y6x6a217mipy4zuh6uzo9y&dl=1"]
         ];
 
-        // Загрузка
-        let pct = 0;
-        let loader = setInterval(() => {
-            pct += 5;
-            document.getElementById('load-pct').innerText = `Загрузка Ресурсов. Это займёт считанные секунды — ${pct}%`;
-            if (pct >= 100) {
-                clearInterval(loader);
-                document.getElementById('loading-screen').style.display = 'none';
-                const warn = document.getElementById('warn-screen');
-                warn.style.display = 'block';
-                warn.classList.add('fade-in');
+        // 1. Симуляция загрузки
+        let progress = 0;
+        let loadInterval = setInterval(() => {
+            progress += Math.floor(Math.random() * 10) + 5;
+            if (progress >= 100) {
+                progress = 100;
+                clearInterval(loadInterval);
+                finishLoading();
             }
-        }, 100);
+            percentSpan.innerText = progress;
+        }, 200);
 
-        function startGame() {
-            document.getElementById('warn-screen').style.display = 'none';
-            document.getElementById('bg-music').play();
-            
-            const container = document.getElementById('grid-container');
-            container.style.display = 'grid';
-            container.classList.add('fade-in');
-
-            iconsData.forEach((data, index) => {
-                const box = document.createElement('div');
-                box.className = 'icon-box';
-                box.style.backgroundImage = `url('${data.normal}')`;
-                
-                let isAlt = false;
-                box.onclick = () => {
-                    document.getElementById('click-sound').currentTime = 0;
-                    document.getElementById('click-sound').play();
-                    isAlt = !isAlt;
-                    box.style.backgroundImage = isAlt ? `url('${data.alt}')` : `url('${data.normal}')`;
-                };
-                container.appendChild(box);
-            });
+        function finishLoading() {
+            loadingText.style.display = 'none';
+            warnText.style.display = 'block';
+            tapHint.style.display = 'block';
         }
+
+        // 2. Старт Вики по клику
+        window.addEventListener('click', function startWiki() {
+            if (progress < 100) return;
+            
+            // Удаляем слушатель, чтобы не перезапускать
+            window.removeEventListener('click', startWiki);
+            
+            warnText.style.display = 'none';
+            tapHint.style.display = 'none';
+            grid.style.display = 'grid';
+            
+            bgMusic.play().catch(e => console.log("Нужен клик для звука"));
+            
+            // Генерируем иконки
+            characters.forEach((pair, index) => {
+                const icon = document.createElement('div');
+                icon.className = 'icon fade-in';
+                icon.style.backgroundImage = `url('${pair[0]}')`;
+                icon.dataset.state = "0"; // 0 - обычный, 1 - альтернативный
+
+                icon.onclick = (e) => {
+                    e.stopPropagation(); // Чтобы не срабатывали глобальные клики
+                    
+                    // Звук клика
+                    clickSound.currentTime = 0;
+                    clickSound.play();
+
+                    // Смена картинки
+                    if (icon.dataset.state === "0") {
+                        icon.style.backgroundImage = `url('${pair[1]}')`;
+                        icon.dataset.state = "1";
+                    } else {
+                        icon.style.backgroundImage = `url('${pair[0]}')`;
+                        icon.dataset.state = "0";
+                    }
+                };
+                grid.appendChild(icon);
+            });
+        });
     </script>
 </body>
 </html>
